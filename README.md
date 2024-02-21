@@ -3,9 +3,9 @@ This library tries to extract boilerplate message dispatching logic into a reusa
 
 It assumes messages follow a basic format (see type definition), and is one of three types: request, response, or notification.
 
-The module provides a method to `dispatch` requests and notifications to predefined handlers, and then generating responses from their return values.
+The module provides a method to `dispatch` requests and notifications to message handlers, and generate responses from their return values.
 
-The `dispatch` method will dispatch responses not to the handlers but to response listeners.  The caller registers a response listener by calling the `waitForResponse` method, which returns a promise.
+The `dispatch` method can also dispatch responses, not to message handlers, but to response listeners.  The caller registers a response listener by calling the `waitForResponse` method, which returns a promise.
 
 When constructing a dispatcher, caller provides a `myAddress` parameter used to filter messages.  Only requests and notifications whose `to` attribute matches `myAddress` will be processed.
 
