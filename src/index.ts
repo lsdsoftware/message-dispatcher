@@ -1,5 +1,5 @@
 
-type Message = Request|Notification|Response
+export type Message = Request|Notification|Response
 
 interface Request {
   to: string
@@ -48,6 +48,9 @@ export function makeDispatcher(myAddress: string, handlers: Record<string, Handl
         case "notification": return handleNotification(message, sender)
         case "response": return handleResponse(message)
       }
+    },
+    updateHandlers(newHandlers: typeof handlers) {
+      handlers = newHandlers
     }
   }
 

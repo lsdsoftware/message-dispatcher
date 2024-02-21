@@ -1,4 +1,4 @@
-type Message = Request | Notification | Response;
+export type Message = Request | Notification | Response;
 interface Request {
     to: string;
     type: "request";
@@ -24,5 +24,6 @@ interface Handler {
 export declare function makeDispatcher(myAddress: string, handlers: Record<string, Handler>): {
     waitForResponse<T>(requestId: string): Promise<T>;
     dispatch(message: Message, sender: unknown, sendResponse: (res: Response) => void): boolean | void;
+    updateHandlers(newHandlers: typeof handlers): void;
 };
 export {};

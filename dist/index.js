@@ -13,6 +13,9 @@ export function makeDispatcher(myAddress, handlers) {
                 case "notification": return handleNotification(message, sender);
                 case "response": return handleResponse(message);
             }
+        },
+        updateHandlers(newHandlers) {
+            handlers = newHandlers;
         }
     };
     function makePending() {
