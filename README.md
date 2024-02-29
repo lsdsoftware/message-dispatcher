@@ -1,41 +1,60 @@
 # message-dispatcher
-This library tries to extract boilerplate message dispatching logic into a reusable module.
+Dispatch received messages to handlers.  This utility assumes messages are one of three types: request, response, or notification; and follow this format:
 
-It assumes messages follow a basic format (see type definition), and is one of three types: request, response, or notification.
+```typescript
+interface Request {
+  to: string
+  type: "request"
+  id: "string"
+  method: string
+  args: Record<string, unknown>
+}
 
-The module provides a method to `dispatch` requests and notifications to message handlers, and generate responses from their return values.
+interface Notification {
+  to: string
+  type: "notification"
+  method: string
+  args: Record<string, unknown>
+}
 
-The `dispatch` method can also dispatch responses, not to message handlers, but to response listeners.  The caller registers a response listener by calling the `waitForResponse` method, which returns a promise.
+interface Response {
+  type: "response"
+  id: string
+  error: unknown
+  result: unknown
+}
+```
 
-When constructing a dispatcher, caller provides a `myAddress` parameter used to filter messages.  Only requests and notifications whose `to` attribute matches `myAddress` will be processed.
 
 ## Usage
+Call `dispatch` to dispatch a received message.  Requests and notifications are dispatched to handlers that you provide at construction.  Responses are dispatched to response listeners.  To listen for a response, call `waitForResponse` with the request ID.
+
+A _myAddress_ parameter provided at construction is used to filter messages.  Only requests and notifications sent `to` myAddress will be processed.
+
 ```typescript
-const handlers = {
-  method1({a, b}, sender) {
+import { makeMessageDispatcher } from "@lsdsoftware/message-dispatcher"
+
+const dispatcher = makeMessageDispatcher("myAddress", {
+  method1(args, sender) {
     //do something
     return result
   },
-  async method2({x, y, z}, sender) {
+  async method2(args, sender) {
     //do something
     return result
   }
-}
+})
 
-const dispatcher = makeDispatcher("myAddress", handlers)
-
-//sample usage
-
-//processing requests and responses
+//example: process messages received from iframe
 window.addEventListener("message", event => {
   const sender = {window: event.source, origin: event.origin}
   const sendResponse = response => sender.window.postMessage(response, sender.origin)
   dispatcher.dispatch(event.data, sender, sendResponse)
 })
 
-//sending requests
+//send request to iframe
 const id = String(Math.random())
-const request = {to: "someAddress", type: "request", id, method: "someMethod", args: {}}
+const request = {to: "someAddress", type: "request", id: id, method: "someMethod", args: {...}}
 iframeWindow.postMessage(request, "*")
 dispatcher.waitForResponse(id)
   .then(result => console.log(result))
