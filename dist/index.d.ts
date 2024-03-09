@@ -18,12 +18,12 @@ interface Response {
     error: unknown;
     result: unknown;
 }
-interface Handler {
-    (args: Record<string, unknown>, sender: unknown): unknown;
+interface Handler<Sender> {
+    (args: Record<string, unknown>, sender: Sender): unknown;
 }
-export declare function makeDispatcher(myAddress: string, handlers: Record<string, Handler>): {
+export declare function makeDispatcher<Sender>(myAddress: string, handlers: Record<string, Handler<Sender>>): {
     waitForResponse<T>(requestId: string): Promise<T>;
-    dispatch(message: Message, sender: unknown, sendResponse: (res: Response) => void): boolean | void;
+    dispatch(message: Message, sender: Sender, sendResponse: (res: Response) => void): boolean | void;
     updateHandlers(newHandlers: typeof handlers): void;
 };
 export {};

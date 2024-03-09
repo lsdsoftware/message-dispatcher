@@ -23,8 +23,8 @@ interface Response {
   result: unknown
 }
 
-interface Handler {
-  (args: Record<string, unknown>, sender: unknown): unknown
+interface Handler<Sender> {
+  (args: Record<string, unknown>, sender: Sender): unknown
 }
 
 interface PendingRequest {
@@ -34,7 +34,7 @@ interface PendingRequest {
 }
 
 
-export function makeDispatcher(myAddress: string, handlers: Record<string, Handler>) {
+export function makeDispatcher<Sender>(myAddress: string, handlers: Record<string, Handler<Sender>>) {
   const pendingRequests = new Map<string, PendingRequest>()
   return {
     waitForResponse<T>(requestId: string): Promise<T> {
@@ -42,7 +42,7 @@ export function makeDispatcher(myAddress: string, handlers: Record<string, Handl
       if (!pending) pendingRequests.set(requestId, pending = makePending())
       return pending.promise as Promise<T>
     },
-    dispatch(message: Message, sender: unknown, sendResponse: (res: Response) => void) {
+    dispatch(message: Message, sender: Sender, sendResponse: (res: Response) => void) {
       switch (message.type) {
         case "request": return handleRequest(message, sender, sendResponse)
         case "notification": return handleNotification(message, sender)
@@ -65,7 +65,7 @@ export function makeDispatcher(myAddress: string, handlers: Record<string, Handl
     return pending
   }
 
-  function handleRequest(req: Request, sender: unknown, sendResponse: (res: Response) => void): boolean|undefined {
+  function handleRequest(req: Request, sender: Sender, sendResponse: (res: Response) => void): boolean|undefined {
     if (req.to == myAddress) {
       if (handlers[req.method]) {
         Promise.resolve()
@@ -83,7 +83,7 @@ export function makeDispatcher(myAddress: string, handlers: Record<string, Handl
     }
   }
 
-  function handleNotification(ntf: Notification, sender: unknown): void {
+  function handleNotification(ntf: Notification, sender: Sender): void {
     if (ntf.to == myAddress) {
       if (handlers[ntf.method]) {
         Promise.resolve()
