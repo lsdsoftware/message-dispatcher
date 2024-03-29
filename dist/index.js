@@ -61,7 +61,7 @@ export function makeDispatcher(myAddress, handlers) {
             else
                 pending.fulfill(res.result);
         }
-        else {
+        else if (res.to == myAddress) {
             console.error("Stray response", res);
         }
     }

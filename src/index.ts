@@ -2,7 +2,7 @@
 export type Message = Request|Notification|Response
 
 interface Request {
-  from: string
+  from?: string
   to: string
   type: "request"
   id: "string"
@@ -18,7 +18,7 @@ interface Notification {
 }
 
 interface Response {
-  to: string
+  to?: string
   type: "response"
   id: string
   error: unknown
@@ -105,7 +105,7 @@ export function makeDispatcher<Sender>(myAddress: string, handlers: Record<strin
       if (res.error) pending.reject(res.error)
       else pending.fulfill(res.result)
     }
-    else {
+    else if (res.to == myAddress) {
       console.error("Stray response", res)
     }
   }
