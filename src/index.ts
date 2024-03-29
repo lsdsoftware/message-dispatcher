@@ -2,6 +2,7 @@
 export type Message = Request|Notification|Response
 
 interface Request {
+  from: string
   to: string
   type: "request"
   id: "string"
@@ -17,6 +18,7 @@ interface Notification {
 }
 
 interface Response {
+  to: string
   type: "response"
   id: string
   error: unknown
@@ -71,8 +73,8 @@ export function makeDispatcher<Sender>(myAddress: string, handlers: Record<strin
         Promise.resolve()
           .then(() => handlers[req.method](req.args, sender))
           .then(
-            result => sendResponse({type: "response", id: req.id, result, error: undefined}),
-            error => sendResponse({type: "response", id: req.id, result: undefined, error})
+            result => sendResponse({to: req.from, type: "response", id: req.id, result, error: undefined}),
+            error => sendResponse({to: req.from, type: "response", id: req.id, result: undefined, error})
           )
         //let caller know that sendResponse will be called asynchronously
         return true

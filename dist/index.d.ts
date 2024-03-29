@@ -1,5 +1,6 @@
 export type Message = Request | Notification | Response;
 interface Request {
+    from: string;
     to: string;
     type: "request";
     id: "string";
@@ -13,6 +14,7 @@ interface Notification {
     args: Record<string, unknown>;
 }
 interface Response {
+    to: string;
     type: "response";
     id: string;
     error: unknown;

@@ -31,7 +31,7 @@ export function makeDispatcher(myAddress, handlers) {
             if (handlers[req.method]) {
                 Promise.resolve()
                     .then(() => handlers[req.method](req.args, sender))
-                    .then(result => sendResponse({ type: "response", id: req.id, result, error: undefined }), error => sendResponse({ type: "response", id: req.id, result: undefined, error }));
+                    .then(result => sendResponse({ to: req.from, type: "response", id: req.id, result, error: undefined }), error => sendResponse({ to: req.from, type: "response", id: req.id, result: undefined, error }));
                 //let caller know that sendResponse will be called asynchronously
                 return true;
             }
