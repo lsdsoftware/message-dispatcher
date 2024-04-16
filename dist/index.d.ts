@@ -1,20 +1,22 @@
 export type Message = Request | Notification | Response;
 interface Request {
-    from?: string;
+    from: string;
     to: string;
     type: "request";
-    id: "string";
+    id: string;
     method: string;
-    args: Record<string, unknown>;
+    args?: Record<string, unknown>;
 }
 interface Notification {
+    from: string;
     to: string;
     type: "notification";
     method: string;
-    args: Record<string, unknown>;
+    args?: Record<string, unknown>;
 }
 interface Response {
-    to?: string;
+    from: string;
+    to: string;
     type: "response";
     id: string;
     error: unknown;
@@ -23,9 +25,17 @@ interface Response {
 interface Handler<Sender> {
     (args: Record<string, unknown>, sender: Sender): unknown;
 }
-export declare function makeDispatcher<Sender>(myAddress: string, handlers: Record<string, Handler<Sender>>): {
+export declare function makeMessageDispatcher<Sender>({ from, to, requestHandlers }: {
+    from: string;
+    to: string;
+    requestHandlers: Record<string, Handler<Sender>>;
+}): {
     waitForResponse<T>(requestId: string): Promise<T>;
-    dispatch(message: Message, sender: Sender, sendResponse: (res: Response) => void): boolean | void;
-    updateHandlers(newHandlers: typeof handlers): void;
+    dispatch({ message, sender, sendResponse }: {
+        message: Message;
+        sender: Sender;
+        sendResponse(res: Response): void;
+    }): boolean | void;
+    updateHandlers(newHandlers: typeof requestHandlers): void;
 };
 export {};

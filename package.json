@@ -1,6 +1,6 @@
 {
   "name": "@lsdsoftware/message-dispatcher",
-  "version": "1.0.6",
+  "version": "2.0.0",
   "description": "Extract boilerplate message dispatching logic into a reusable module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,6 +22,6 @@
   },
   "homepage": "https://github.com/lsdsoftware/message-dispatcher#readme",
   "devDependencies": {
-    "typescript": "^5.3.3"
+    "typescript": "^5.4.5"
   }
 }

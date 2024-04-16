@@ -3,21 +3,25 @@ Dispatch received messages to handlers.  This utility assumes messages are one o
 
 ```typescript
 interface Request {
+  from: string
   to: string
   type: "request"
-  id: "string"
+  id: string
   method: string
-  args: Record<string, unknown>
+  args?: Record<string, unknown>
 }
 
 interface Notification {
+  from: string
   to: string
   type: "notification"
   method: string
-  args: Record<string, unknown>
+  args?: Record<string, unknown>
 }
 
 interface Response {
+  from: string
+  to: string
   type: "response"
   id: string
   error: unknown
@@ -27,36 +31,48 @@ interface Response {
 
 
 ## Usage
-Call `dispatch` to dispatch a received message.  Requests and notifications are dispatched to handlers that you provide at construction.  Responses are dispatched to response listeners.  To listen for a response, call `waitForResponse` with the request ID.
+Call `dispatch` to dispatch a received message.  Only messages whose `from` and `to` attributes match those of the dispatcher will be processed.
 
-A _myAddress_ parameter provided at construction is used to filter messages.  Only requests and notifications sent `to` myAddress will be processed.
+Requests and notifications are dispatched to handlers provided during construction, while responses are dispatched to response listeners.  To listen for a response, call `waitForResponse` with the request ID.
 
 ```typescript
 import { makeMessageDispatcher } from "@lsdsoftware/message-dispatcher"
 
-const dispatcher = makeMessageDispatcher("myAddress", {
-  method1(args, sender) {
-    //do something
-    return result
-  },
-  async method2(args, sender) {
-    //do something
-    return result
+const iframe1MessageDispatcher = makeMessageDispatcher({
+  from: "iframe1",
+  to: "main",
+  requestHandlers: {
+    method1(args, sender) {
+      //do something
+      return result
+    },
+    async method2(args, sender) {
+      //do something
+      return result
+    }
   }
 })
 
-//example: process messages received from iframe
+//process messages from iframe1
 window.addEventListener("message", event => {
   const sender = {window: event.source, origin: event.origin}
-  const sendResponse = response => sender.window.postMessage(response, sender.origin)
-  dispatcher.dispatch(event.data, sender, sendResponse)
+  iframe1MessageDispatcher.dispatch({
+    message: event.data,
+    sender: sender,
+    sendResponse: response => sender.window.postMessage(response, sender.origin)
+  })
 })
 
-//send request to iframe
+//send a request to iframe1
 const id = String(Math.random())
-const request = {to: "someAddress", type: "request", id: id, method: "someMethod", args: {...}}
-iframeWindow.postMessage(request, "*")
-dispatcher.waitForResponse(id)
-  .then(result => console.log(result))
-  .catch(console.error)
+const request = {
+  from: "main",
+  to: "iframe1",
+  type: "request",
+  id: id,
+  method: "someMethod",
+  args: {...}
+}
+iframe1.contentWindow.postMessage(request, "*")
+iframe1MessageDispatcher.waitForResponse(id).then(result => console.log(result))
 ```

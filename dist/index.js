@@ -1,4 +1,4 @@
-export function makeDispatcher(myAddress, handlers) {
+export function makeMessageDispatcher({ from, to, requestHandlers }) {
     const pendingRequests = new Map();
     return {
         waitForResponse(requestId) {
@@ -7,15 +7,17 @@ export function makeDispatcher(myAddress, handlers) {
                 pendingRequests.set(requestId, pending = makePending());
             return pending.promise;
         },
-        dispatch(message, sender, sendResponse) {
-            switch (message.type) {
-                case "request": return handleRequest(message, sender, sendResponse);
-                case "notification": return handleNotification(message, sender);
-                case "response": return handleResponse(message);
+        dispatch({ message, sender, sendResponse }) {
+            if (message.from == from && message.to == to) {
+                switch (message.type) {
+                    case "request": return handleRequest(message, sender, sendResponse);
+                    case "notification": return handleNotification(message, sender);
+                    case "response": return handleResponse(message);
+                }
             }
         },
         updateHandlers(newHandlers) {
-            handlers = newHandlers;
+            requestHandlers = newHandlers;
         }
     };
     function makePending() {
@@ -27,29 +29,25 @@ export function makeDispatcher(myAddress, handlers) {
         return pending;
     }
     function handleRequest(req, sender, sendResponse) {
-        if (req.to == myAddress) {
-            if (handlers[req.method]) {
-                Promise.resolve()
-                    .then(() => handlers[req.method](req.args, sender))
-                    .then(result => sendResponse({ to: req.from, type: "response", id: req.id, result, error: undefined }), error => sendResponse({ to: req.from, type: "response", id: req.id, result: undefined, error }));
-                //let caller know that sendResponse will be called asynchronously
-                return true;
-            }
-            else {
-                console.error("No handler for method", req);
-            }
+        if (requestHandlers[req.method]) {
+            Promise.resolve()
+                .then(() => requestHandlers[req.method](req.args || {}, sender))
+                .then(result => sendResponse({ from: req.to, to: req.from, type: "response", id: req.id, result, error: undefined }), error => sendResponse({ from: req.to, to: req.from, type: "response", id: req.id, result: undefined, error }));
+            //let caller know that sendResponse will be called asynchronously
+            return true;
+        }
+        else {
+            console.error("No handler for method", req);
         }
     }
     function handleNotification(ntf, sender) {
-        if (ntf.to == myAddress) {
-            if (handlers[ntf.method]) {
-                Promise.resolve()
-                    .then(() => handlers[ntf.method](ntf.args, sender))
-                    .catch(error => console.error("Failed to handle notification", ntf, error));
-            }
-            else {
-                console.error("No handler for method", ntf);
-            }
+        if (requestHandlers[ntf.method]) {
+            Promise.resolve()
+                .then(() => requestHandlers[ntf.method](ntf.args || {}, sender))
+                .catch(error => console.error("Failed to handle notification", ntf, error));
+        }
+        else {
+            console.error("No handler for method", ntf);
         }
     }
     function handleResponse(res) {
@@ -61,7 +59,7 @@ export function makeDispatcher(myAddress, handlers) {
             else
                 pending.fulfill(res.result);
         }
-        else if (res.to == myAddress) {
+        else {
             console.error("Stray response", res);
         }
     }

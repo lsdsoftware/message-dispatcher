@@ -2,23 +2,25 @@
 export type Message = Request|Notification|Response
 
 interface Request {
-  from?: string
+  from: string
   to: string
   type: "request"
-  id: "string"
+  id: string
   method: string
-  args: Record<string, unknown>
+  args?: Record<string, unknown>
 }
 
 interface Notification {
+  from: string
   to: string
   type: "notification"
   method: string
-  args: Record<string, unknown>
+  args?: Record<string, unknown>
 }
 
 interface Response {
-  to?: string
+  from: string
+  to: string
   type: "response"
   id: string
   error: unknown
@@ -36,7 +38,11 @@ interface PendingRequest {
 }
 
 
-export function makeDispatcher<Sender>(myAddress: string, handlers: Record<string, Handler<Sender>>) {
+export function makeMessageDispatcher<Sender>({from, to, requestHandlers}: {
+  from: string
+  to: string
+  requestHandlers: Record<string, Handler<Sender>>
+}) {
   const pendingRequests = new Map<string, PendingRequest>()
   return {
     waitForResponse<T>(requestId: string): Promise<T> {
@@ -44,15 +50,21 @@ export function makeDispatcher<Sender>(myAddress: string, handlers: Record<strin
       if (!pending) pendingRequests.set(requestId, pending = makePending())
       return pending.promise as Promise<T>
     },
-    dispatch(message: Message, sender: Sender, sendResponse: (res: Response) => void) {
-      switch (message.type) {
-        case "request": return handleRequest(message, sender, sendResponse)
-        case "notification": return handleNotification(message, sender)
-        case "response": return handleResponse(message)
+    dispatch({message, sender, sendResponse}: {
+      message: Message
+      sender: Sender
+      sendResponse(res: Response): void
+    }) {
+      if (message.from == from && message.to == to) {
+        switch (message.type) {
+          case "request": return handleRequest(message, sender, sendResponse)
+          case "notification": return handleNotification(message, sender)
+          case "response": return handleResponse(message)
+        }
       }
     },
-    updateHandlers(newHandlers: typeof handlers) {
-      handlers = newHandlers
+    updateHandlers(newHandlers: typeof requestHandlers) {
+      requestHandlers = newHandlers
     }
   }
 
@@ -68,33 +80,29 @@ export function makeDispatcher<Sender>(myAddress: string, handlers: Record<strin
   }
 
   function handleRequest(req: Request, sender: Sender, sendResponse: (res: Response) => void): boolean|undefined {
-    if (req.to == myAddress) {
-      if (handlers[req.method]) {
-        Promise.resolve()
-          .then(() => handlers[req.method](req.args, sender))
-          .then(
-            result => sendResponse({to: req.from, type: "response", id: req.id, result, error: undefined}),
-            error => sendResponse({to: req.from, type: "response", id: req.id, result: undefined, error})
-          )
-        //let caller know that sendResponse will be called asynchronously
-        return true
-      }
-      else {
-        console.error("No handler for method", req)
-      }
+    if (requestHandlers[req.method]) {
+      Promise.resolve()
+        .then(() => requestHandlers[req.method](req.args || {}, sender))
+        .then(
+          result => sendResponse({from: req.to, to: req.from, type: "response", id: req.id, result, error: undefined}),
+          error => sendResponse({from: req.to, to: req.from, type: "response", id: req.id, result: undefined, error})
+        )
+      //let caller know that sendResponse will be called asynchronously
+      return true
+    }
+    else {
+      console.error("No handler for method", req)
     }
   }
 
   function handleNotification(ntf: Notification, sender: Sender): void {
-    if (ntf.to == myAddress) {
-      if (handlers[ntf.method]) {
-        Promise.resolve()
-          .then(() => handlers[ntf.method](ntf.args, sender))
-          .catch(error => console.error("Failed to handle notification", ntf, error))
-      }
-      else {
-        console.error("No handler for method", ntf)
-      }
+    if (requestHandlers[ntf.method]) {
+      Promise.resolve()
+        .then(() => requestHandlers[ntf.method](ntf.args || {}, sender))
+        .catch(error => console.error("Failed to handle notification", ntf, error))
+    }
+    else {
+      console.error("No handler for method", ntf)
     }
   }
 
@@ -105,7 +113,7 @@ export function makeDispatcher<Sender>(myAddress: string, handlers: Record<strin
       if (res.error) pending.reject(res.error)
       else pending.fulfill(res.result)
     }
-    else if (res.to == myAddress) {
+    else {
       console.error("Stray response", res)
     }
   }
